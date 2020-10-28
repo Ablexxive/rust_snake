@@ -11,8 +11,12 @@ pub fn food_spawner(
     mut commands: Commands,
     food_material: Res<FoodMaterial>,
     time: Res<Time>,
+    paused: Res<Paused>,
     mut timer: ResMut<FoodSpawnTimer>,
 ) {
+    if paused.0 {
+        return;
+    }
     timer.0.tick(time.delta_seconds);
     if timer.0.finished {
         commands

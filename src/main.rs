@@ -14,6 +14,14 @@ use food::*;
 use game_over::*;
 use snake::*;
 
+// Pause
+fn pause(mut paused: ResMut<Paused>, keyboard_input: Res<Input<KeyCode>>) {
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        paused.0 = !paused.0;
+        println!("Pause: {}", paused.0)
+    }
+}
+
 fn resource_setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     // Bevy requires a specific ordering to the params when registering systems.
     // Commands → Resources → Components/Queries.
@@ -27,6 +35,16 @@ fn resource_setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMate
     commands.insert_resource(FoodMaterial(
         materials.add(Color::rgb(1.0, 0.0, 1.0).into()),
     ));
+    //commands
+    //.spawn(UiCameraComponents::default())
+    //.spawn(NodeComponents {
+    //style: Style {
+    //size: bevy::prelude::Size::new(Val::Px(100.0), Val::Px(100.0)),
+    //..Default::default()
+    //},
+    //material: materials.add(Color::rgb(0.08, 0.08, 1.0).into()),
+    //..Default::default()
+    //});
 }
 
 fn game_setup(
@@ -81,9 +99,11 @@ fn main() {
             true,
         )))
         .add_event::<GameOverEvent>()
+        .add_resource(common::Paused(false))
         .add_startup_system(resource_setup.system())
         .add_startup_stage("game_setup") // Not quite sure what Stage is doing here but lets keep going.
         .add_startup_system_to_stage("game_setup", game_setup.system())
+        .add_system(pause.system())
         .add_system(snake_movement.system())
         .add_system(position_translation.system())
         .add_system(size_scaling.system())

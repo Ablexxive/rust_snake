@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::common::{Direction, Position, Size, ARENA_HEIGHT, ARENA_WIDTH};
+use crate::common::{Direction, Paused, Position, Size, ARENA_HEIGHT, ARENA_WIDTH};
 use crate::food::Food;
 use crate::game_over::GameOverEvent;
 
@@ -61,6 +61,7 @@ pub fn snake_movement(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     segment_material: Res<SegmentMaterial>,
+    paused: Res<Paused>,
     mut snake_timer: ResMut<SnakeMoveTimer>,
     mut game_over_events: ResMut<Events<GameOverEvent>>,
     mut head_position: Query<(&mut SnakeHead, &mut Position)>,
@@ -68,6 +69,9 @@ pub fn snake_movement(
     positions: Query<&mut Position>,
     mut food_positions: Query<(Entity, &Food, &Position)>,
 ) {
+    if paused.0 {
+        return;
+    }
     snake_timer.0.tick(time.delta_seconds);
     for (mut head, mut head_pos) in &mut head_position.iter() {
         let mut dir: Direction = head.direction;

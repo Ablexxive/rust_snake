@@ -1,6 +1,8 @@
 pub const ARENA_WIDTH: u32 = 40;
 pub const ARENA_HEIGHT: u32 = 40;
 
+pub struct Paused(pub bool);
+
 #[derive(Default, Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Position {
     pub x: i32,
