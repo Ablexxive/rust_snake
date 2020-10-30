@@ -21,7 +21,7 @@ pub fn food_spawner(
     if timer.0.finished {
         commands
             .spawn(SpriteComponents {
-                material: food_material.0,
+                material: food_material.0.clone(),
                 ..Default::default()
             })
             .with(Food)

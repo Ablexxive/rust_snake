@@ -39,11 +39,15 @@ impl SnakeSegment {
         head_material: Handle<ColorMaterial>,
         segment_material: Handle<ColorMaterial>,
     ) {
-        SnakeSegment::spawn_segment(&mut commands, segment_material, Position { x: 10, y: 9 });
+        SnakeSegment::spawn_segment(
+            &mut commands,
+            segment_material.clone(),
+            Position { x: 10, y: 9 },
+        );
         let first_segment = commands.current_entity().unwrap();
         commands
             .spawn(SpriteComponents {
-                material: head_material,
+                material: head_material.clone(),
                 sprite: Sprite::new(Vec2::new(10.0, 10.0)),
                 ..Default::default()
             })
@@ -98,19 +102,6 @@ pub fn snake_movement(
             head.direction = dir;
         }
 
-        ////Y wrap around
-        //if head_pos.y > 40 {
-        //head_pos.y = 0;
-        //} else if head_pos.y < 0 {
-        //head_pos.y = 40;
-        //}
-
-        ////X wrap around
-        //if head_pos.x > 40 {
-        //head_pos.x = 0;
-        //} else if head_pos.x < 0 {
-        //head_pos.x = 40;
-        //}
         if snake_timer.0.finished {
             let mut last_position = *head_pos;
             let mut segment_entity = head.next_segment;
@@ -145,7 +136,11 @@ pub fn snake_movement(
             }
             for (ent, _food, food_pos) in &mut food_positions.iter() {
                 if food_pos == &*head_pos {
-                    SnakeSegment::spawn_segment(&mut commands, segment_material.0, last_position);
+                    SnakeSegment::spawn_segment(
+                        &mut commands,
+                        segment_material.0.clone(),
+                        last_position,
+                    );
                     let new_segment = commands.current_entity();
                     let mut segment = segments.get_mut::<SnakeSegment>(segment_entity).unwrap();
                     segment.next_segment = new_segment;

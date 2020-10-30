@@ -1,4 +1,4 @@
-// Walk through of:
+// Initial gameplay code from:
 // https://mbuffett.com/posts/bevy-snake-tutorial/
 use bevy::prelude::*;
 use bevy::render::pass::ClearColor;
@@ -7,22 +7,20 @@ use std::time::Duration;
 mod common;
 mod food;
 mod game_over;
+mod pause_screen;
 mod snake;
 
 use common::{Size, *};
 use food::*;
 use game_over::*;
+use pause_screen::*;
 use snake::*;
 
-// Pause
-fn pause(mut paused: ResMut<Paused>, keyboard_input: Res<Input<KeyCode>>) {
-    if keyboard_input.just_pressed(KeyCode::Escape) {
-        paused.0 = !paused.0;
-        println!("Pause: {}", paused.0)
-    }
-}
-
-fn resource_setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn resource_setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     // Bevy requires a specific ordering to the params when registering systems.
     // Commands → Resources → Components/Queries.
     commands.spawn(Camera2dComponents::default());
@@ -35,16 +33,50 @@ fn resource_setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMate
     commands.insert_resource(FoodMaterial(
         materials.add(Color::rgb(1.0, 0.0, 1.0).into()),
     ));
-    //commands
-    //.spawn(UiCameraComponents::default())
-    //.spawn(NodeComponents {
-    //style: Style {
-    //size: bevy::prelude::Size::new(Val::Px(100.0), Val::Px(100.0)),
-    //..Default::default()
-    //},
-    //material: materials.add(Color::rgb(0.08, 0.08, 1.0).into()),
-    //..Default::default()
-    //});
+
+    // Pause Menu Elements
+    commands.spawn(UiCameraComponents::default());
+    commands
+        .spawn(NodeComponents {
+            style: Style {
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                size: bevy::prelude::Size::new(Val::Px(2000.0), Val::Px(2000.0)),
+                ..Default::default()
+            },
+            material: materials.add(Color::rgb(0.02, 0.02, 0.02).into()),
+            draw: Draw {
+                is_visible: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .with(PauseScreenItem)
+        .with_children(|parent| {
+            parent
+                .spawn(TextComponents {
+                    style: Style {
+                        align_self: AlignSelf::Center,
+                        size: bevy::prelude::Size::new(Val::Px(200.0), Val::Px(200.0)),
+                        ..Default::default()
+                    },
+                    text: Text {
+                        value: "Pause".to_string(),
+                        font: asset_server.load("assets/fonts/SFNS.ttf").unwrap(),
+                        style: TextStyle {
+                            font_size: 200.0,
+                            color: Color::WHITE,
+                        },
+                        ..Default::default()
+                    },
+                    draw: Draw {
+                        is_visible: false,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .with(PauseScreenItem);
+        });
 }
 
 fn game_setup(
@@ -52,7 +84,11 @@ fn game_setup(
     head_material: Res<HeadMaterial>,
     segment_material: Res<SegmentMaterial>,
 ) {
-    SnakeSegment::spawn_initial_snake(commands, head_material.0, segment_material.0);
+    SnakeSegment::spawn_initial_snake(
+        commands,
+        head_material.0.clone(),
+        segment_material.0.clone(),
+    );
 }
 
 fn size_scaling(windows: Res<Windows>, mut q: Query<(&Size, &mut Sprite)>) {
@@ -60,7 +96,7 @@ fn size_scaling(windows: Res<Windows>, mut q: Query<(&Size, &mut Sprite)>) {
         for (size, mut sprite) in &mut q.iter() {
             sprite.size = Vec2::new(
                 size.width as f32 / ARENA_WIDTH as f32 * window.width as f32,
-                size.height as f32 / ARENA_HEIGHT as f32 * window.width as f32,
+                size.height as f32 / ARENA_HEIGHT as f32 * window.height as f32,
             )
         }
     }
@@ -72,7 +108,7 @@ fn position_translation(windows: Res<Windows>, mut q: Query<(&Position, &mut Tra
     }
     if let Some(window) = windows.get_primary() {
         for (pos, mut transform) in &mut q.iter() {
-            transform.set_translation(Vec3::new(
+            *transform = Transform::from_translation(Vec3::new(
                 convert(pos.x as f32, window.width as f32, ARENA_WIDTH as f32),
                 convert(pos.y as f32, window.height as f32, ARENA_HEIGHT as f32),
                 0.0,
@@ -101,7 +137,7 @@ fn main() {
         .add_event::<GameOverEvent>()
         .add_resource(common::Paused(false))
         .add_startup_system(resource_setup.system())
-        .add_startup_stage("game_setup") // Not quite sure what Stage is doing here but lets keep going.
+        .add_startup_stage("game_setup")
         .add_startup_system_to_stage("game_setup", game_setup.system())
         .add_system(pause.system())
         .add_system(snake_movement.system())

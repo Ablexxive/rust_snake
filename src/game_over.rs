@@ -24,6 +24,10 @@ pub fn game_over_system(
         for (ent, _head) in &mut heads.iter() {
             commands.despawn(ent);
         }
-        SnakeSegment::spawn_initial_snake(commands, head_material.0, segment_material.0);
+        SnakeSegment::spawn_initial_snake(
+            commands,
+            head_material.0.clone(),
+            segment_material.0.clone(),
+        );
     }
 }
