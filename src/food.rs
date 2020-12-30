@@ -8,7 +8,7 @@ pub struct FoodMaterial(pub Handle<ColorMaterial>);
 pub struct Food;
 
 pub fn food_spawner(
-    mut commands: Commands,
+    commands: &mut Commands,
     food_material: Res<FoodMaterial>,
     time: Res<Time>,
     paused: Res<Paused>,
@@ -17,10 +17,10 @@ pub fn food_spawner(
     if paused.0 {
         return;
     }
-    timer.0.tick(time.delta_seconds);
-    if timer.0.finished {
+    timer.0.tick(time.delta_seconds());
+    if timer.0.finished() {
         commands
-            .spawn(SpriteComponents {
+            .spawn(SpriteBundle {
                 material: food_material.0.clone(),
                 ..Default::default()
             })

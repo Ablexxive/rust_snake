@@ -5,14 +5,14 @@ use bevy::prelude::*;
 pub struct GameOverEvent;
 
 pub fn game_over_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     mut reader: Local<EventReader<GameOverEvent>>,
     game_over_events: Res<Events<GameOverEvent>>,
     segment_material: Res<SegmentMaterial>,
     head_material: Res<HeadMaterial>,
-    mut segments: Query<(Entity, &SnakeSegment)>,
-    mut food: Query<(Entity, &Food)>,
-    mut heads: Query<(Entity, &SnakeHead)>,
+    segments: Query<(Entity, &SnakeSegment)>,
+    food: Query<(Entity, &Food)>,
+    heads: Query<(Entity, &SnakeHead)>,
 ) {
     if reader.iter(&game_over_events).next().is_some() {
         for (ent, _segment) in &mut segments.iter() {

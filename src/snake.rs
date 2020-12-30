@@ -26,7 +26,7 @@ impl SnakeSegment {
         position: Position,
     ) {
         commands
-            .spawn(SpriteComponents {
+            .spawn(SpriteBundle {
                 material,
                 ..Default::default()
             })
@@ -35,18 +35,14 @@ impl SnakeSegment {
             .with(Size::square(0.65));
     }
     pub fn spawn_initial_snake(
-        mut commands: Commands,
+        commands: &mut Commands,
         head_material: Handle<ColorMaterial>,
         segment_material: Handle<ColorMaterial>,
     ) {
-        SnakeSegment::spawn_segment(
-            &mut commands,
-            segment_material.clone(),
-            Position { x: 10, y: 9 },
-        );
+        SnakeSegment::spawn_segment(commands, segment_material.clone(), Position { x: 10, y: 9 });
         let first_segment = commands.current_entity().unwrap();
         commands
-            .spawn(SpriteComponents {
+            .spawn(SpriteBundle {
                 material: head_material.clone(),
                 sprite: Sprite::new(Vec2::new(10.0, 10.0)),
                 ..Default::default()
@@ -61,7 +57,7 @@ impl SnakeSegment {
 }
 
 pub fn snake_movement(
-    mut commands: Commands,
+    commands: &mut Commands,
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     segment_material: Res<SegmentMaterial>,
@@ -69,15 +65,15 @@ pub fn snake_movement(
     mut snake_timer: ResMut<SnakeMoveTimer>,
     mut game_over_events: ResMut<Events<GameOverEvent>>,
     mut head_position: Query<(&mut SnakeHead, &mut Position)>,
-    segments: Query<&mut SnakeSegment>,
-    positions: Query<&mut Position>,
-    mut food_positions: Query<(Entity, &Food, &Position)>,
+    mut segments: Query<&mut SnakeSegment>,
+    mut positions: Query<&mut Position>,
+    food_positions: Query<(Entity, &Food, &Position)>,
 ) {
     if paused.0 {
         return;
     }
-    snake_timer.0.tick(time.delta_seconds);
-    for (mut head, mut head_pos) in &mut head_position.iter() {
+    snake_timer.0.tick(time.delta_seconds());
+    for (mut head, mut head_pos) in head_position.iter_mut() {
         let mut dir: Direction = head.direction;
         if keyboard_input.pressed(KeyCode::Left) {
             dir = Direction::Left;
@@ -102,12 +98,12 @@ pub fn snake_movement(
             head.direction = dir;
         }
 
-        if snake_timer.0.finished {
+        if snake_timer.0.finished() {
             let mut last_position = *head_pos;
             let mut segment_entity = head.next_segment;
             loop {
-                let segment = segments.get::<SnakeSegment>(segment_entity).unwrap();
-                let mut segment_position = positions.get_mut::<Position>(segment_entity).unwrap();
+                let segment = segments.get_mut(segment_entity).unwrap();
+                let mut segment_position = positions.get_mut(segment_entity).unwrap();
                 let current_position = *segment_position;
                 *segment_position = last_position;
                 last_position = current_position;
@@ -137,12 +133,12 @@ pub fn snake_movement(
             for (ent, _food, food_pos) in &mut food_positions.iter() {
                 if food_pos == &*head_pos {
                     SnakeSegment::spawn_segment(
-                        &mut commands,
+                        commands,
                         segment_material.0.clone(),
                         last_position,
                     );
                     let new_segment = commands.current_entity();
-                    let mut segment = segments.get_mut::<SnakeSegment>(segment_entity).unwrap();
+                    let mut segment = segments.get_mut(segment_entity).unwrap();
                     segment.next_segment = new_segment;
                     commands.despawn(ent);
                 }

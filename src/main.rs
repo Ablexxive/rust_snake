@@ -1,5 +1,6 @@
 // Initial gameplay code from:
 // https://mbuffett.com/posts/bevy-snake-tutorial/
+use bevy::app::startup_stage::PRE_STARTUP;
 use bevy::prelude::*;
 use bevy::render::pass::ClearColor;
 use std::time::Duration;
@@ -17,13 +18,11 @@ use pause_screen::*;
 use snake::*;
 
 fn resource_setup(
-    mut commands: Commands,
+    commands: &mut Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // Bevy requires a specific ordering to the params when registering systems.
-    // Commands → Resources → Components/Queries.
-    commands.spawn(Camera2dComponents::default());
+    commands.spawn(Camera2dBundle::default());
     commands.insert_resource(HeadMaterial(
         materials.add(Color::rgb(0.7, 0.7, 0.7).into()),
     ));
@@ -35,9 +34,9 @@ fn resource_setup(
     ));
 
     // Pause Menu Elements
-    commands.spawn(UiCameraComponents::default());
+    commands.spawn(CameraUiBundle::default());
     commands
-        .spawn(NodeComponents {
+        .spawn(NodeBundle {
             style: Style {
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
@@ -45,7 +44,8 @@ fn resource_setup(
                 ..Default::default()
             },
             material: materials.add(Color::rgb(0.02, 0.02, 0.02).into()),
-            draw: Draw {
+            draw: Draw::default(),
+            visible: Visible {
                 is_visible: false,
                 ..Default::default()
             },
@@ -54,7 +54,7 @@ fn resource_setup(
         .with(PauseScreenItem)
         .with_children(|parent| {
             parent
-                .spawn(TextComponents {
+                .spawn(TextBundle {
                     style: Style {
                         align_self: AlignSelf::Center,
                         size: bevy::prelude::Size::new(Val::Px(200.0), Val::Px(200.0)),
@@ -62,14 +62,16 @@ fn resource_setup(
                     },
                     text: Text {
                         value: "Pause".to_string(),
-                        font: asset_server.load("assets/fonts/SFNS.ttf").unwrap(),
+                        font: asset_server.load("fonts/SFNS.ttf"),
                         style: TextStyle {
                             font_size: 200.0,
                             color: Color::WHITE,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
-                    draw: Draw {
+                    draw: Draw::default(),
+                    visible: Visible {
                         is_visible: false,
                         ..Default::default()
                     },
@@ -80,7 +82,7 @@ fn resource_setup(
 }
 
 fn game_setup(
-    commands: Commands,
+    commands: &mut Commands,
     head_material: Res<HeadMaterial>,
     segment_material: Res<SegmentMaterial>,
 ) {
@@ -91,26 +93,26 @@ fn game_setup(
     );
 }
 
-fn size_scaling(windows: Res<Windows>, mut q: Query<(&Size, &mut Sprite)>) {
+fn size_scaling(windows: Res<Windows>, mut query: Query<(&Size, &mut Sprite)>) {
     if let Some(window) = windows.get_primary() {
-        for (size, mut sprite) in &mut q.iter() {
+        for (size, mut sprite) in query.iter_mut() {
             sprite.size = Vec2::new(
-                size.width as f32 / ARENA_WIDTH as f32 * window.width as f32,
-                size.height as f32 / ARENA_HEIGHT as f32 * window.height as f32,
+                size.width as f32 / ARENA_WIDTH as f32 * window.width() as f32,
+                size.height as f32 / ARENA_HEIGHT as f32 * window.height() as f32,
             )
         }
     }
 }
 
-fn position_translation(windows: Res<Windows>, mut q: Query<(&Position, &mut Transform)>) {
+fn position_translation(windows: Res<Windows>, mut query: Query<(&Position, &mut Transform)>) {
     fn convert(p: f32, bound_window: f32, bound_game: f32) -> f32 {
         p / bound_game * bound_window - (bound_window / 2.)
     }
     if let Some(window) = windows.get_primary() {
-        for (pos, mut transform) in &mut q.iter() {
+        for (pos, mut transform) in query.iter_mut() {
             *transform = Transform::from_translation(Vec3::new(
-                convert(pos.x as f32, window.width as f32, ARENA_WIDTH as f32),
-                convert(pos.y as f32, window.height as f32, ARENA_HEIGHT as f32),
+                convert(pos.x as f32, window.width() as f32, ARENA_WIDTH as f32),
+                convert(pos.y as f32, window.height() as f32, ARENA_HEIGHT as f32),
                 0.0,
             ));
         }
@@ -121,10 +123,11 @@ fn main() {
     App::build()
         .add_resource(WindowDescriptor {
             title: "Ssssnake!".to_string(),
-            width: 2000,
-            height: 2000,
+            width: 2000.0,
+            height: 2000.0,
             ..Default::default()
         })
+        .add_resource(common::Paused(false))
         .add_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .add_resource(SnakeMoveTimer(Timer::new(
             Duration::from_millis((150.) as u64),
@@ -134,17 +137,15 @@ fn main() {
             Duration::from_millis(1000),
             true,
         )))
+        .add_startup_system_to_stage(PRE_STARTUP, resource_setup.system())
+        .add_startup_system(game_setup.system())
         .add_event::<GameOverEvent>()
-        .add_resource(common::Paused(false))
-        .add_startup_system(resource_setup.system())
-        .add_startup_stage("game_setup")
-        .add_startup_system_to_stage("game_setup", game_setup.system())
         .add_system(pause.system())
         .add_system(snake_movement.system())
         .add_system(position_translation.system())
         .add_system(size_scaling.system())
         .add_system(food_spawner.system())
         .add_system(game_over_system.system())
-        .add_default_plugins()
+        .add_plugins(DefaultPlugins)
         .run();
 }
